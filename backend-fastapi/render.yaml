@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: notes-fastapi
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./notes.db
+      - key: ALLOWED_ORIGINS
+        value: https://your-frontend.vercel.app
+      - key: BASE_PUBLIC_URL
+        value: https://notes-fastapi.onrender.com
