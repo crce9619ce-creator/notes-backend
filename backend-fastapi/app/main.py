@@ -12,15 +12,13 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Notes API", version="1.0.0")
 
-# CORS
-allowed = os.getenv("ALLOWED_ORIGINS", "*")
-origins = [o.strip() for o in allowed.split(",")] if allowed else ["*"]
+# 🔹 CORS FIX: allow all for now
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],        # allow all origins (safe to test)
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],        # allow all HTTP methods
+    allow_headers=["*"],        # allow all headers
 )
 
 def get_db():
@@ -66,7 +64,6 @@ def delete_note(note_id: int, db: Session = Depends(get_db)):
 
 def _build_share_url(share_id: str) -> str:
     base = BASE_PUBLIC_URL.rstrip("/") if BASE_PUBLIC_URL else ""
-    # If BASE_PUBLIC_URL is set, expose API URL; frontend will convert to its public route.
     return f"{base}/public/{share_id}" if base else f"/public/{share_id}"
 
 @app.post("/notes/{note_id}/share", response_model=schemas.ShareToggleOut)
@@ -75,17 +72,19 @@ def toggle_share(note_id: int, db: Session = Depends(get_db)):
     if not note:
         raise HTTPException(404, "Note not found")
     if note.is_public and note.share_id:
-        # turn off sharing
         note.is_public = False
         note.share_id = None
     else:
-        # turn on sharing
         note.is_public = True
         note.share_id = uuid.uuid4().hex
     db.add(note)
     db.commit()
     db.refresh(note)
-    return {"id": note.id, "is_public": note.is_public, "share_url": _build_share_url(note.share_id) if note.is_public else ""}
+    return {
+        "id": note.id,
+        "is_public": note.is_public,
+        "share_url": _build_share_url(note.share_id) if note.is_public else ""
+    }
 
 @app.get("/public/{share_id}", response_model=schemas.NoteOut)
 def view_public(share_id: str, db: Session = Depends(get_db)):
